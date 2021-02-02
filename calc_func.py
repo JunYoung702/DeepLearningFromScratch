@@ -18,13 +18,15 @@ def identity(x):
     return x
 
 
-def softmax(a):
-    c = np.max(a)
-    exp_a = np.exp(a - c)
-    sum_exp_a = np.sum(exp_a)
-    y = exp_a / sum_exp_a
+def softmax(x):
+    if x.ndim == 2:
+        x = x.T
+        x = x - np.max(x, axis=0)
+        y = np.exp(x) / np.sum(np.exp(x), axis=0)
+        return y.T
 
-    return y
+    x = x - np.max(x) # 오버플로 대책
+    return np.exp(x) / np.sum(np.exp(x))
 
 
 def MSE(y, t):
@@ -36,8 +38,12 @@ def entropy(y, t):
         t = t.reshape(1, t.size)
         y = y.reshape(1, y.size)
 
+    # 훈련 데이터가 원-핫 벡터라면 정답 레이블의 인덱스로 반환
+    if t.size == y.size:
+        t = t.argmax(axis=1)
+
     batch_size = y.shape[0]
-    return -np.sum(t * np.log(y)) / batch_size
+    return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
 
 
 def diff(f, x):
@@ -66,12 +72,11 @@ def _numerical_gradient_no_batch(f, x):
     return grad
 
 
-def gradient(f, X):
+def numerical_gradient(f, X):
     if X.ndim == 1:
         return _numerical_gradient_no_batch(f, X)
     else:
         grad = np.zeros_like(X)
-
         for idx, x in enumerate(X):
             grad[idx] = _numerical_gradient_no_batch(f, x)
 
